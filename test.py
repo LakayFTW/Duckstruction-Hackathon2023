@@ -1,19 +1,28 @@
 import asyncio
 import socketio
-
-SECRET = 'f6d5633c-c40e-4f73-990c-48c01f7032d7'
-URL = 'https://games.uhno.de'
+from const import SECRET, URL
+from handler import handlers
 
 sio = socketio.AsyncClient()
+field = [['']*10]*10
 
 @sio.event
 async def connect():
     print('Verbunden!')
-    await sio.emit('authenticate', SECRET)
+    await sio.emit('authenticate', SECRET)    
+
+@sio.event
+async def data(data):
+    print('DATEN!!!!')
+    t = data['type']
+    if t in handlers:
+        return handlers[t](data)
+    else:
+        raise Exception('Handel dein Zeuch')
 
 async def main():
     await sio.connect(URL, transports=['websocket'])
     await sio.wait()
 
 if __name__ == '__main__':
-    asyncio.run(main());
+    asyncio.run(main())
