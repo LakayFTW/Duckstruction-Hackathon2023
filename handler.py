@@ -1,7 +1,6 @@
 import random
 from moebel import Moebel
 import pprint
-from time import sleep
 
 init_data = None
 def handle_init(data):
@@ -12,22 +11,29 @@ last_round_result = None
 def handle_result(data):
     global last_round_result
     last_round_result = data
-    print('Player 1 ENDSCORE: ' + str(last_round_result['players'][0]['score']) + ' ID: ' + str(data['players'][0]['id']) + ' WIR!' if last_round_result['self'] == data['players'][0]['id'] else '')
-    print('Player 2 ENDSCORE: ' + str(last_round_result['players'][1]['score']) + ' ID: ' + str(data['players'][1]['id']) + ' WIR!' if last_round_result['self'] == data['players'][1]['id'] else '')
+    print('Player 1 ENDSCORE: ' + str(last_round_result['players'][0]['score']) + ' ID: ' + str(data['players'][0]['id']) + (' WIR!' if last_round_result['self'] == data['players'][0]['id'] else ''))
+    print('Player 2 ENDSCORE: ' + str(last_round_result['players'][1]['score']) + ' ID: ' + str(data['players'][1]['id']) + (' WIR!' if last_round_result['self'] == data['players'][1]['id'] else ''))
+
+
+def handle_round(data):
+    print_round(data)
+
+    last_choices = [log['move'] for log in data['log'] if data['self'] == log['player']]
+    choice = [random.randint(0, 9), random.randint(0, 9)]
+    while choice in last_choices:
+        choice = [random.randint(0, 9), random.randint(0, 9)]
+
+    return choice
 
 round = 0
-def handle_round(data):
-    sleep(4)
+def print_round(data):
     global round
     round += 1
-    print('Player 1: ' + str(data['players'][0]['score']) + ' ID: ' + str(data['players'][0]['id']))
-    print('Player 2: ' + str(data['players'][1]['score']) + ' ID: ' + str(data['players'][1]['id']))
     print('Round: ' + str(round))
     print('------------------')
     pprint.pp(data['boards'][0])
     print('------------------')
     pprint.pp(data['boards'][1])
-    return [random.randint(0, 9), random.randint(0, 9)]
 
 def handle_set(data):
     moebels = []
