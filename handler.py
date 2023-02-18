@@ -64,25 +64,6 @@ def handle_set(data):
     print(list_of_moebel_dicts)
     return list_of_moebel_dicts
 
-# def can_place_moebel(x, y, size, direction):
-#     if moebels:
-#         if direction == 'h':
-#             if y + size > FIELD_SIZE:
-#                 print(str(y + size))
-#                 return False
-#             for i in range(size):
-#                 if [moebel for moebel in moebels if moebel.x == x and moebel.y == y+i]:
-#                     return False
-#         elif direction == 'v':
-#             if x + size > FIELD_SIZE:
-#                 print(str(x + size))
-#                 return False
-#             for i in range(size):
-#                 if [moebel for moebel in moebels if moebel.x == x+i and moebel.y == y]:
-#                     return False
-#         return True
-#     return True
-
 def moebel_placable(next_moebel, size):
     placable = False
     sidestep = False
@@ -100,24 +81,27 @@ def moebel_placable(next_moebel, size):
     coordlist.append(inner)
     
     if moebels:
-        for moebel in moebels:
-            for i in range(len(coordlist)):
-                for j in range(len(coordlist)):
-                    if coordlist[i][j+1] != coordlist[i+1][j]:
-                        test1 = coordlist[i][j+1]
-                        test2 = coordlist[i+1][j]
-                        if(i+1 == moebel.size and sidestep == False):
-                            print("placed!")
-                            placable = True
-                            coordlist.append(inner)
+        if check_for_neighbour(coordlist):
+            for m in range(len(coordlist)-1):
+                for i in range(len(coordlist[m])):
+                    for j in range(len(coordlist[-1])):
+                        # print(coordlist[-1][j][0], coordlist[-1][j][1])
+                        # print(coordlist[m][i][0], coordlist[m][i][1])
+                        # checks if moebel intersect
+                        if coordlist[-1][j][0] != coordlist[m][i][0] or coordlist[-1][j][1] != coordlist[m][i][1]:
+                            if(sidestep == False):
+                                print("placed!")
+                                placable = True
+                            else:
+                                placable = False
+                                print("intersects")
+                                inner = []
                         else:
+                            print("cant place")
                             placable = False
                             inner = []
-                    else:
-                        print("cant place")
-                        placable = False
-                        sidestep = True
-                        inner = []
+        else:
+            placable = False
     else:
         print("placable")
         return True
@@ -125,7 +109,27 @@ def moebel_placable(next_moebel, size):
         placable = False
         return True
     else:
+        coordlist.pop(-1)
         return False
+
+def check_for_neighbour(coordlist):
+    for m in range(len(coordlist)-1):
+        for i in range(len(coordlist[m])):
+            for j in range(len(coordlist[-1])):
+                # if coordlist[-1][j+1][0] != coordlist[m][i][0] or coordlist[-1][j-1][0] != coordlist[m][i][0]
+                neighbors = lambda x, y : [(x2, y2) for x2 in range(x-1, x+2)
+                               for y2 in range(y-1, y+2)
+                               if (-1 < x <= 10 and
+                                   -1 < y <= 10 and
+                                   (x != x2 or y != y2) and
+                                   (0 <= x2 <= 10) and
+                                   (0 <= y2 <= 10))] 
+                test = neighbors(coordlist[-1][j][0], coordlist[-1][j][1])
+                for k in range(len(test)):
+                    if not (test[k][0] != coordlist[m][i][0] or test[k][1] != coordlist[m][i][1]):
+                        print("hits neighbour")
+                        return False
+    return True
 
 async def handle_auth(success):
     if success:
