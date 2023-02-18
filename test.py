@@ -4,7 +4,6 @@ from const import SECRET, URL
 from handler import handlers
 
 sio = socketio.AsyncClient()
-field = [['']*10]*10
 
 @sio.event
 async def connect():
