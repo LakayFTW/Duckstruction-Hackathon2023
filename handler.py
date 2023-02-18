@@ -4,6 +4,9 @@ import pprint
 from round import print_round
 from copy import deepcopy
 import os
+import time
+import generator
+
 clear = lambda: os.system('clear') 
 
 init_data = None
@@ -101,7 +104,10 @@ def handle_round(data):
             if ship_to_remove in current_hunt.hunt_possibilities:
                 current_hunt.hunt_possibilities.remove(current_hunt.hunt_hits + 1)
             else:
-                raise Exception('halt stop carsten')
+                print('HALT CARSTEN, WIR HABEN EINEN NOTFALL ' + str(current_hunt.hunt_hits))
+                current_hunt.hunt_hits - 1
+                current_hunt.hunt_possibilities.remove(current_hunt.hunt_hits + 1)
+                
             current_hunt.hunt_hits = 0
             current_hunt.hunt_start = None
         
@@ -153,32 +159,54 @@ def handle_round(data):
             current_hunt.last_choice = choice
             return choice
     else:
-        # print('!!!TEST!!! GENERIERTE MÖGLICHKEIT')
-        # possibilites = [generate_map(enemy_ships, deepcopy(current_map)) for i in range(100)]
-        # pprint.pp(possibilites)    
-        # print('__________________________________')
-        choice = [random.randint(0, 9), random.randint(0, 9)]
+        probabilities = [[0,0,0,0,0,0,0,0,0,0],
+                  [0,0,0,0,0,0,0,0,0,0],
+                  [0,0,0,0,0,0,0,0,0,0],
+                  [0,0,0,0,0,0,0,0,0,0],
+                  [0,0,0,0,0,0,0,0,0,0],
+                  [0,0,0,0,0,0,0,0,0,0],
+                  [0,0,0,0,0,0,0,0,0,0],
+                  [0,0,0,0,0,0,0,0,0,0],
+                  [0,0,0,0,0,0,0,0,0,0],
+                  [0,0,0,0,0,0,0,0,0,0]]
+        generated_maps = []
         
-        while current_map[choice[0]][choice[1]] in ['X', 'x', '.']:
-            choice = [random.randint(0, 9), random.randint(0, 9)]
-            
-        current_map[choice[0]][choice[1]] = 'x'
+        start = time.time()
+        while time.time() - start < 1 :
+            generated_maps.append(generate_map(current_hunt.hunt_possibilities, deepcopy(current_map)))
+        print(f'Woweeee {len(generated_maps)} karten generiert')
+        
+        for generated_map in generated_maps:
+            for i in range(len(generated_map)):
+                for j in range(len(generated_map[i])):
+                    if generated_map[i][j] == 'O':                        
+                        probabilities[i][j] += 1
+
+        max_value = 0
+        choice = None
+        for i in range(len(probabilities)):
+                for j in range(len(probabilities[i])):
+                    value = probabilities[i][j]
+                    if max_value < value:
+                        max_value = value
+                        choice = [i, j]
         
         current_hunt.last_choice = choice
-        
-        return choice
-
+        return choice 
+    
 def generate_map(ships_left, enemy_map):
     global enemie_ships
     enemie_ships = [5, 4, 3, 3, 2]
     baddies = ['x', 'X', '.', 'O']
+    tries = 5
        
     for ship in ships_left:
         choice_possible = False
         choice = None
         orientation = random.choice(Moebel.directions)  
-        
-        while not choice_possible:
+        i = 0
+        while not choice_possible and i < tries:
+            i += 1
             choice = [random.randint(0, 9), random.randint(0, 9)]
             choice_possible = not enemy_map[choice[0]][choice[1]] in baddies
             if choice_possible:
@@ -229,21 +257,7 @@ def handle_set(data):
     hunt_possibilities = [5,4,3,3,2]
     last_choice = None
     hunt = False    
-    moebels = []
-    i = 0
-    for size in Moebel.moebel_sizes:
-        next_moebel = Moebel(size, i, i, 'v')
-        moebels.append(next_moebel)
-        i += 2
-
-    list_of_moebel_dicts = []
-    for next_moebel in moebels:
-        list_of_moebel_dicts.append({
-            'start': [next_moebel.x, next_moebel.y],
-            'direction': next_moebel.direction,
-            'size': next_moebel.size
-            })
-    return list_of_moebel_dicts
+    return generator.Generator()
 
 async def handle_auth(success):
     if success:

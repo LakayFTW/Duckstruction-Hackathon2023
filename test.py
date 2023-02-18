@@ -2,9 +2,6 @@ import asyncio
 import socketio
 from const import SECRET, URL
 from handler import handlers
-import sys
-
-sys.setrecursionlimit(10000)
 
 sio = socketio.AsyncClient()
 
