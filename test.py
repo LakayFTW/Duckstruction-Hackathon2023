@@ -2,17 +2,18 @@ import asyncio
 import socketio
 from const import SECRET, URL
 from handler import handlers
+import sys
+
+sys.setrecursionlimit(10000)
 
 sio = socketio.AsyncClient()
 
 @sio.event
 async def connect():
-    print('Verbunden!')
     await sio.emit('authenticate', SECRET)    
 
 @sio.event
 async def data(data):
-    print('DATEN!!!!')
     t = data['type']
     if t in handlers:
         return handlers[t](data)

@@ -3,6 +3,8 @@ from moebel import Moebel
 import pprint
 from round import print_round
 from copy import deepcopy
+import os
+clear = lambda: os.system('clear') 
 
 init_data = None
 def handle_init(data):
@@ -11,6 +13,18 @@ def handle_init(data):
 wins = 0
 loses = 0
 enemie_ships = []
+
+class Hunt():
+    def __init__(self):
+        self.hunt = None
+        self.hunt_start = None
+        self.hunt_direction = 1
+        self.hunt_orientation = Moebel.directions[0]
+        self.last_choice = None
+        self.hunt_direction_changed = False
+        self.hunt_orientation_changed = False
+        self.hunt_hits = 0
+        self.hunt_possibilities = [5, 4, 3, 3, 2]
 
 def handle_result(data):
     global wins, loses
@@ -28,71 +42,119 @@ def get_player(data):
     players = data['players']
     return [player for player in players if player['id'] == data['self']][0]
 
+def get_enemy_player(data):
+    players = data['players']
+    return [player for player in players if player['id'] != data['self']][0]
+
 def get_enemy_player_index(data):
     players = data['players']
-    result = [player for player in players if player['id'] != data['self']][0]
-    return players.index(result)
+    return players.index(get_enemy_player(data))
 
 def get_enemy_map(data):
     return data['boards'][get_enemy_player_index(data)]
 
-last_choice = None
-hunt_start = None
-hunt_direction = 1
-hunt_orientation = Moebel.directions[0]
-hunt = False
+game_dict = {}
 def handle_round(data):
-    global enemie_ships, hunt, hunt_start, hunt_direction, hunt_orientation, last_choice
-    print(f"Gegner: {data['players'][get_enemy_player_index(data)]}")
+    enemy_player = get_enemy_player(data)
+    
+    if not enemy_player['id'] in game_dict.keys():
+        game_dict[enemy_player['id']] = Hunt()
+        
+    current_hunt = game_dict[enemy_player['id']]
+    
+    print(f"Gegner: {data['players'][get_enemy_player_index(data)]} ist gejagt: {current_hunt.hunt}")
     
     current_map = get_enemy_map(data)
     pprint.pp(current_map)
     
-    if last_choice:
-        print(f'Last choice: {last_choice}')
-        if last_choice[1] > 9:
-                print('whut')
-        if not hunt and current_map[last_choice[0]][last_choice[1]] == 'x':
-            hunt = True
-            hunt_start = last_choice  
-        elif current_map[last_choice[0]][last_choice[1]] == 'X':
-            hunt = False
+    if current_hunt.last_choice:
+        print(f'Last choice: {current_hunt.last_choice}')
+        print(f'Da kommen wir her: never forgetti {current_hunt.hunt_start}')
+        if current_hunt.last_choice[1] > 9:
+            current_hunt.last_choice = current_hunt.hunt_start
+            if not current_hunt.hunt_direction_changed:
+                current_hunt.hunt_direction = current_hunt.hunt_direction * -1
+                current_hunt.hunt_direction_changed = True
+                current_hunt.hunt_orientation_changed = False
+            else:
+                current_hunt.hunt_orientation = 'h' if current_hunt.hunt_orientation == 'v' else 'v'
+                current_hunt.hunt_orientation_changed = True
+                current_hunt.hunt_direction_changed = False
+        if current_hunt.last_choice[1] < 0:
+            current_hunt.last_choice = current_hunt.hunt_start
+            if not current_hunt.hunt_direction_changed:
+                current_hunt.hunt_direction = current_hunt.hunt_direction * -1
+                current_hunt.hunt_direction_changed = True
+                current_hunt.hunt_orientation_changed = False
+            else:
+                current_hunt.hunt_orientation = 'h' if current_hunt.hunt_orientation == 'v' else 'v'
+                current_hunt.hunt_orientation_changed = True
+                current_hunt.hunt_direction_changed = False
+                
+        if not current_hunt.hunt and current_map[current_hunt.last_choice[0]][current_hunt.last_choice[1]] == 'x':
+            current_hunt.hunt = True
+            current_hunt.hunt_start = current_hunt.last_choice  
+        elif current_hunt.hunt and current_map[current_hunt.last_choice[0]][current_hunt.last_choice[1]] == 'X':
+            current_hunt.hunt = False
+            
+            ship_to_remove = current_hunt.hunt_hits + 1
+            if ship_to_remove in current_hunt.hunt_possibilities:
+                current_hunt.hunt_possibilities.remove(current_hunt.hunt_hits + 1)
+            else:
+                print('halt stop carsten')
+            current_hunt.hunt_hits = 0
+            current_hunt.hunt_start = None
         
-    if hunt:
+    if current_hunt.hunt:
         invalid_choices = 0
         
-        #rework 
-        if hunt_orientation == 'v':
-            if not (0 < (last_choice[1] + hunt_direction) < 9) or current_map[last_choice[0]][last_choice[1] + hunt_direction] in ['X', 'x', '.']:
-                hunt_direction = hunt_direction * -1
+        if current_map[current_hunt.last_choice[0]][current_hunt.last_choice[1]] == 'x':
+            current_hunt.hunt_hits += 1
+        
+        if current_map[current_hunt.last_choice[0]][current_hunt.last_choice[1]] == '.':
+            current_hunt.last_choice = current_hunt.hunt_start
+            
+            if not current_hunt.hunt_direction_changed:
+                current_hunt.hunt_direction = current_hunt.hunt_direction * -1
+                current_hunt.hunt_direction_changed = True
+                current_hunt.hunt_orientation_changed = False
+            else:
+                current_hunt.hunt_orientation = 'h' if current_hunt.hunt_orientation == 'v' else 'v'
+                current_hunt.hunt_orientation_changed = True
+                current_hunt.hunt_direction_changed = False
+            # return handle_round(data)
+         
+        if current_hunt.hunt_orientation == 'v':
+            if not (0 <= (current_hunt.last_choice[1] + current_hunt.hunt_direction) <= 9) or current_map[current_hunt.last_choice[0]][current_hunt.last_choice[1] + current_hunt.hunt_direction] in ['X', '.']:
+                current_hunt.hunt_direction = current_hunt.hunt_direction * -1
                 invalid_choices += 1
-            if not (0 < (last_choice[1] + hunt_direction) < 9) or current_map[last_choice[0]][last_choice[1] + hunt_direction] in ['X', 'x', '.']:    
-                hunt_orientation = 'h'
+            if not (0 <= (current_hunt.last_choice[1] + current_hunt.hunt_direction) <= 9) or current_map[current_hunt.last_choice[0]][current_hunt.last_choice[1] + current_hunt.hunt_direction] in ['X', '.']:    
+                current_hunt.hunt_orientation = 'h'
                 invalid_choices += 1
                  
-        if hunt_orientation == 'h':
-            if not (0 < (last_choice[0] + hunt_direction) < 9) or current_map[last_choice[0] + hunt_direction][last_choice[1]] in ['X', 'x', '.']:
-                hunt_direction = hunt_direction * -1
+        if current_hunt.hunt_orientation == 'h':
+            if not (0 <= (current_hunt.last_choice[0] + current_hunt.hunt_direction) <= 9) or current_map[current_hunt.last_choice[0] + current_hunt.hunt_direction][current_hunt.last_choice[1]] in ['X', '.']:
+                current_hunt.hunt_direction = current_hunt.hunt_direction * -1
                 invalid_choices += 1
-            if not (0 < (last_choice[0] + hunt_direction) < 9) or current_map[last_choice[0] + hunt_direction][last_choice[1]] in ['X', 'x', '.']:    
-                hunt_orientation = 'v'
+            if not (0 <= (current_hunt.last_choice[0] + current_hunt.hunt_direction) <= 9) or current_map[current_hunt.last_choice[0] + current_hunt.hunt_direction][current_hunt.last_choice[1]] in ['X', '.']:    
+                current_hunt.hunt_orientation = 'v'
                 invalid_choices += 1
                     
-        if invalid_choices == 4:
-            last_choice = hunt_start
-            return handle_round(data)
+        # if invalid_choices == 4:
+        #     last_choice = hunt_start
+        #     return handle_round(data)
             
-        if hunt_orientation == 'v':
-            choice = [last_choice[0], last_choice[1] + hunt_direction]
-            last_choice = choice
+        if current_hunt.hunt_orientation == 'v':
+            choice = [current_hunt.last_choice[0], current_hunt.last_choice[1] + current_hunt.hunt_direction]
+            current_hunt.last_choice = choice
             return choice
-        elif hunt_orientation == 'h':
-            choice = [last_choice[0] + hunt_direction, last_choice[1]]
-            last_choice = choice
+        elif current_hunt.hunt_orientation == 'h':
+            choice = [current_hunt.last_choice[0] + current_hunt.hunt_direction, current_hunt.last_choice[1]]
+            current_hunt.last_choice = choice
             return choice
     else:
         # print('!!!TEST!!! GENERIERTE MÖGLICHKEIT')
-        # possibilites = [generate_map(enemie_ships, deepcopy(current_map)) for i in range(100)]
+        # possibilites = [generate_map(enemy_ships, deepcopy(current_map)) for i in range(100)]
         # pprint.pp(possibilites)    
         # print('__________________________________')
         choice = [random.randint(0, 9), random.randint(0, 9)]
@@ -102,7 +164,7 @@ def handle_round(data):
             
         current_map[choice[0]][choice[1]] = 'x'
         
-        last_choice = choice
+        current_hunt.last_choice = choice
         
         return choice
 
@@ -163,7 +225,8 @@ def generate_map(ships_left, enemy_map):
                     
 
 def handle_set(data):
-    global last_choice, hunt
+    global last_choice, hunt, hunt_possibilities
+    hunt_possibilities = [5,4,3,3,2]
     last_choice = None
     hunt = False    
     moebels = []
