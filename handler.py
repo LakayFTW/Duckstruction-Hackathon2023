@@ -101,7 +101,7 @@ def handle_round(data):
             if ship_to_remove in current_hunt.hunt_possibilities:
                 current_hunt.hunt_possibilities.remove(current_hunt.hunt_hits + 1)
             else:
-                print('halt stop carsten')
+                raise Exception('halt stop carsten')
             current_hunt.hunt_hits = 0
             current_hunt.hunt_start = None
         
